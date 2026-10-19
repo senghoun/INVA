@@ -1,0 +1,248 @@
+### ==============================================================================
+### inva Core System — Auth Service API Requests
+### Target Gateway: http://localhost:3000
+### Target Auth Service Direct: http://localhost:3001
+### Tip: Install VS Code / IDE "REST Client" extension to click "Send Request"
+### ==============================================================================
+
+@baseUrl = http://localhost:3000/api/v1
+@contentType = application/json
+
+# Default seeded credentials
+@adminEmail = admin@inva.io
+@adminPassword = AdminPass123!
+
+###############################################################################
+# 1. AUTHENTICATION & TOKENS
+###############################################################################
+
+### 1.1 Login as Admin (saves accessToken & refreshToken automatically in REST Client)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Store token from login response
+@authToken = {{login.response.body.accessToken}}
+@refreshToken = {{login.response.body.refreshToken}}
+
+### Login with a phone assigned to the account (email is omitted)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "phone": "+85512345678",
+  "password": "{{adminPassword}}"
+}
+
+### Assign a login phone (INTERNAL ADMIN only)
+# Replace USER_UUID with the target account UUID.
+PATCH {{baseUrl}}/auth/users/USER_UUID
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "phone": "+85512345678"
+}
+
+### 1.2 Get Current Authenticated User Profile (Me)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+
+### 1.3 Refresh Access Token
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 1.4 Register New User (Self-Service EXTERNAL by default)
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@example.com",
+  "password": "Password123!"
+}
+
+### 1.5 Change Password
+POST {{baseUrl}}/auth/change-password
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "AdminPass123!",
+  "newPassword": "NewAdminPass123!"
+}
+
+### 1.6 Logout / Revoke Session
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###############################################################################
+# 2. USER ADMINISTRATION (Requires INTERNAL Admin)
+###############################################################################
+
+### 2.1 List Users (Paginated & Filterable)
+GET {{baseUrl}}/auth/users?page=1&limit=10&userType=INTERNAL
+Authorization: Bearer {{authToken}}
+
+### 2.2 Create User (Admin Provisioning)
+# @name createUser
+POST {{baseUrl}}/auth/users
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "developer@inva.io",
+  "password": "DevPassword123!",
+  "userType": "INTERNAL"
+}
+
+### Captured Created User ID
+@createdUserId = {{createUser.response.body.id}}
+
+### 2.3 Get User By ID
+GET {{baseUrl}}/auth/users/{{createdUserId}}
+Authorization: Bearer {{authToken}}
+
+### 2.4 Update User
+PATCH {{baseUrl}}/auth/users/{{createdUserId}}
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "isActive": true
+}
+
+### 2.5 Soft Delete User (Sets inactive & revokes sessions)
+DELETE {{baseUrl}}/auth/users/{{createdUserId}}
+Authorization: Bearer {{authToken}}
+
+###############################################################################
+# 3. RBAC ROLES MANAGEMENT
+###############################################################################
+
+### 3.1 List All Roles
+GET {{baseUrl}}/auth/roles?includeInactive=false
+Authorization: Bearer {{authToken}}
+
+### 3.2 Create New Role
+# @name createRole
+POST {{baseUrl}}/auth/roles
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "FINANCE_MANAGER",
+  "description": "Manages billing, invoices, and payment tracking"
+}
+
+### Captured Role ID
+@createdRoleId = {{createRole.response.body.id}}
+
+### 3.3 Assign Role to User
+POST {{baseUrl}}/auth/users/{{createdUserId}}/roles
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "roleId": "{{createdRoleId}}"
+}
+
+### 3.4 Remove Role from User
+DELETE {{baseUrl}}/auth/users/{{createdUserId}}/roles/{{createdRoleId}}
+Authorization: Bearer {{authToken}}
+
+### 3.5 Soft Delete Role
+DELETE {{baseUrl}}/auth/roles/{{createdRoleId}}
+Authorization: Bearer {{authToken}}
+
+
+### ADMIN: Generate temporary password (copy response securely; expires in 24 hours)
+# Replace target UUID and admin token. Own-account resets use change-password instead.
+# @name resetUserPassword
+POST {{baseUrl}}/auth/users/{{createdUserId}}/reset-password
+Authorization: Bearer {{authToken}}
+
+### Login using the generated temporary password
+# @name temporaryLogin
+# Response requiresPasswordChange=true contains a restricted passwordChangeToken, not access tokens.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "developer@inva.io",
+  "password": "{{resetUserPassword.response.body.temporaryPassword}}"
+}
+
+### Choose your own password, then login again with it
+POST {{baseUrl}}/auth/complete-password-change
+Content-Type: application/json
+
+{
+  "passwordChangeToken": "{{temporaryLogin.response.body.passwordChangeToken}}",
+  "newPassword": "<your own new password>"
+}
+
+
+### HR: View own effective HR permissions
+GET {{baseUrl}}/hr/access/me
+Authorization: Bearer {{authToken}}
+
+### HR: Assign existing HR role IDs and link a login account (ADMIN for linking)
+# Replace both UUID placeholders with real employee / HR role IDs.
+PUT {{baseUrl}}/hr/employees/<employee-uuid>/access
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "authUserId": "{{createdUserId}}",
+  "roleIds": ["<hr-role-uuid>"]
+}
+
+### 1. Forgot password: SMS (or channel: telegram after linking)
+POST {{baseUrl}}/auth/password/reset-request
+Content-Type: application/json
+
+{
+  "phone": "+85512345678",
+  "channel": "sms"
+}
+
+### 2. Verify received code; use challengeId from step 1
+POST {{baseUrl}}/auth/password/reset-verify
+Content-Type: application/json
+
+{
+  "challengeId": "00000000-0000-4000-8000-000000000000",
+  "code": "123456"
+}
+
+### 3. Choose new password; use token from step 2
+POST {{baseUrl}}/auth/password/reset-confirm
+Content-Type: application/json
+
+{
+  "token": "REPLACE_WITH_TOKEN_FROM_STEP_2",
+  "newPassword": "NewStrongPassword123!"
+}
+
+### Link recovery Telegram while signed in; open returned bot URL and press Start
+POST {{baseUrl}}/auth/password/telegram/link
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "password": "CURRENT_PASSWORD"
+}

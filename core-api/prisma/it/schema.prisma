@@ -1,0 +1,28 @@
+// =============================================================================
+// prisma/it/schema.prisma — Information Technology Domain
+// Database: inva_it_db
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-it"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_IT_URL")
+}
+
+/// Placeholder model — expand with IT-specific entities (assets, tickets, etc.)
+model AssetRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  /// UUID of hr.EmployeeProfile — no cross-DB FK
+  assignedTo  String?  @map("assigned_to") @db.Uuid
+  category    String   @db.VarChar(64)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("asset_records")
+}

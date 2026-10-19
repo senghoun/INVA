@@ -1,0 +1,36 @@
+{
+  "name": "inva-super-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "dev:hr": "vite --mode hr --port 5174",
+    "build": "tsc && vite build",
+    "build:hr": "tsc && vite build --mode hr",
+    "preview": "vite preview --port 5174",
+    "typecheck": "tsc --noEmit --incremental false"
+  },
+  "dependencies": {
+    "@google/genai": "^0.2.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@tanstack/react-query": "^5.104.0",
+    "lucide-react": "^0.453.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.89.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vite": "^8.3.1"
+  }
+}

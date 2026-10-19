@@ -1,0 +1,73 @@
+// =============================================================================
+// prisma/crm/schema.prisma — Customer Relationship Management Domain
+// Database: inva_crm_db
+// authUserId / ownerId: UUID stored as plain string — no cross-DB FK
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-crm"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_CRM_URL")
+}
+
+enum DealStatus {
+  OPEN
+  WON
+  LOST
+}
+
+model ClientOrganization {
+  id        String            @id @default(uuid()) @db.Uuid
+  name      String            @db.VarChar(200)
+  industry  String?           @db.VarChar(100)
+  website   String?           @db.VarChar(255)
+  isActive  Boolean           @default(true) @map("is_active")
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  customers CustomerProfile[]
+  deals     Deal[]
+
+  @@map("client_organizations")
+}
+
+model CustomerProfile {
+  id          String             @id @default(uuid()) @db.Uuid
+  /// UUID of auth.User — no cross-DB FK
+  authUserId  String             @unique @map("auth_user_id") @db.Uuid
+  clientOrgId String             @map("client_org_id") @db.Uuid
+  firstName   String             @map("first_name") @db.VarChar(100)
+  lastName    String             @map("last_name") @db.VarChar(100)
+  role        String?            @db.VarChar(100)
+  isActive    Boolean            @default(true) @map("is_active")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  organization ClientOrganization @relation(fields: [clientOrgId], references: [id])
+
+  @@map("customer_profiles")
+}
+
+model Deal {
+  id          String             @id @default(uuid()) @db.Uuid
+  title       String             @db.VarChar(255)
+  clientOrgId String             @map("client_org_id") @db.Uuid
+  /// UUID of hr.EmployeeProfile (sales rep) — no cross-DB FK
+  ownerId     String             @map("owner_id") @db.Uuid
+  status      DealStatus         @default(OPEN)
+  amount      Decimal            @db.Decimal(18, 4)
+  currency    String             @default("USD") @db.VarChar(3)
+  closedAt    DateTime?          @map("closed_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  organization ClientOrganization @relation(fields: [clientOrgId], references: [id])
+
+  @@index([clientOrgId])
+  @@index([ownerId])
+  @@map("deals")
+}

@@ -1,0 +1,22 @@
+%% Current implementation reviewed 2026-10-08.
+%% Sources: apps/auth-service/src/services/auth.service.ts,
+%% repositories/auth.repository.ts, security/browser-session.ts,
+%% prisma/auth/schema.prisma. TTL values shown are database defaults, configurable by policy.
+flowchart TD
+    Session["Active session<br/>Access JWT sid = refresh_tokens.id<br/>Refresh JWT jti = same session ID"] --> Request["Protected request<br/>JWT verification plus live-session check"]
+    Session --> Refresh["POST /api/v1/auth/refresh<br/>Browser: inva_refresh cookie + browser header<br/>API client: refreshToken in body"]
+    Refresh --> Valid{"Refresh signature, issuer,<br/>audience, expiry and stored hash valid?"}
+    Valid -->|No| Reject["401: sign in again"]
+    Valid -->|Yes| Consume["Atomically revoke used refresh row<br/>Only one concurrent refresh can succeed"]
+    Consume --> Account{"Account active, no required password<br/>change and MFA assurance satisfied?"}
+    Account -->|No| Deny["Reject; no replacement tokens"]
+    Account -->|Yes| New["Issue new token pair and session ID<br/>Preserve MFA assurance and authenticationAt<br/>Replace browser cookie when applicable"]
+    New --> Session
+    Consume -.-> Old["Previous sid is revoked<br/>Old access token fails next live-session check<br/>Old refresh token cannot be used again"]
+    Session --> Logout["POST /auth/logout<br/>Revoke authenticated sid and matching refresh hash<br/>Clear browser cookie"]
+    Session --> Revoke["Revoke one or all own sessions"]
+    Session --> Change["Password change / admin reset / deactivation<br/>or MFA enrollment / removal"]
+    Logout --> End["Revoked session<br/>Subsequent requests denied"]
+    Revoke --> End
+    Change --> End
+    Defaults["Database policy defaults<br/>Access TTL: 15 minutes<br/>Refresh TTL: 7 days<br/>Concurrent sessions: 0 = unlimited"] -.-> Session

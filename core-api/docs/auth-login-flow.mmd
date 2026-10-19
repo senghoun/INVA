@@ -1,0 +1,33 @@
+%% Current implementation reviewed 2026-10-08. All endpoint paths use /api/v1/auth.
+%% Sources: apps/auth-service/src/services/auth.service.ts, services/mfa.service.ts,
+%% controllers/auth.controller.ts, security/browser-session.ts, repositories/auth.repository.ts.
+flowchart TD
+    Client["Browser or API client<br/>Email OR phone + password"] --> Gateway["API Gateway :3000<br/>IP, domain and rate policy"]
+    Gateway --> Login["POST /auth/login<br/>Auth Service :3001<br/>Throttle and AuthPolicyGuard"]
+    Login --> BrowserCheck["For browser clients: validate origin and fetch context"]
+    BrowserCheck --> Credentials{"Active user and<br/>valid password?"}
+    DB[("Auth PostgreSQL<br/>Users with unique email / phone,<br/>roles, sessions,<br/>MFA, policy and audit")] -.-> Credentials
+    Credentials -->|No| Reject["401: invalid credentials"]
+    Credentials -->|Yes| Temporary{"Temporary password<br/>change required?"}
+    Temporary -->|Yes| Expiry{"Temporary password<br/>still valid?"}
+    Expiry -->|No| Expired["401: ask admin for reset"]
+    Expiry -->|Yes| Restricted["Return restricted password-change JWT<br/>10 minutes; no API session"]
+    Restricted --> Change["POST /auth/complete-password-change<br/>Verify challenge and save new Argon2id hash<br/>Revoke sessions"]
+    Change --> Again["Sign in with new password"]
+    Again --> Login
+    Temporary -->|No| Upgrade["Upgrade legacy bcrypt hash<br/>to Argon2id when applicable"]
+    Upgrade --> MFA{"MFA enabled?"}
+    MFA -->|Yes| Challenge["Return MFA challenge JWT<br/>5 minutes; no API session"]
+    Challenge --> Verify["POST /auth/mfa/verify<br/>Validate TOTP or one-use recovery code<br/>Consume challenge; reject reused codes"]
+    Verify -->|Invalid or expired| Denied["401; attempt limits enforced"]
+    Verify -->|Valid| Issue["Issue HS256 access and refresh JWTs<br/>Load current roles; generate session ID"]
+    MFA -->|No| Issue
+    Issue --> Persist["Create live session in refresh_tokens<br/>Store SHA-256 refresh-token hash<br/>Recheck account; apply concurrent-session limit"]
+    Persist --> DB
+    Persist --> Browser{"X-INVA-Client: browser?"}
+    Browser -->|Yes| Cookie["Return access token<br/>Set inva_refresh HttpOnly cookie<br/>SameSite=Strict; Secure in production"]
+    Browser -->|No| Tokens["Return access and refresh tokens<br/>Explicit bearer-token client"]
+    Cookie --> Use["Call protected APIs<br/>Authorization: Bearer accessToken"]
+    Tokens --> Use
+    Login -.-> Audit["AuthAuditInterceptor<br/>Record login outcome / pending challenge"]
+    Audit -.-> DB

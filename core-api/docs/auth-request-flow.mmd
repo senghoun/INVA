@@ -1,0 +1,31 @@
+%% Current implementation reviewed 2026-10-08.
+%% Sources: libs/common/src/strategies/jwt.strategy.ts,
+%% apps/auth-service/src/strategies/jwt.strategy.ts, libs/common/src/guards,
+%% apps/hr-service/src/guards. Domain checks depend on the selected endpoint.
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant G as API Gateway :3000
+    participant S as Protected domain service
+    participant A as Auth Service :3001
+    participant D as Auth MySQL
+    C->>G: API request + Bearer accessToken + optional X-Company-Id
+    G->>G: Apply gateway policy
+    G->>S: Proxy request with signed client context
+    S->>S: JwtAuthGuard: verify HS256, issuer, audience, expiry, type and sid
+    S->>A: GET /api/v1/auth/me with bearer token and company header
+    A->>A: Verify access JWT
+    A->>D: Load active user, current roles and live session by sub + sid
+    D-->>A: User and unrevoked, unexpired session
+    A->>A: Reject inactive user, required password change or missing MFA assurance
+    opt X-Company-Id supplied
+        A->>D: Check active membership for INTERNAL user
+        D-->>A: Company, branch IDs and permissions
+    end
+    A-->>S: Current identity, roles and companyScope
+    S->>S: Apply endpoint user-type, role and domain permission checks
+    Note over S: HR additionally enforces company / branch or employee permissions and ownership
+    S-->>G: Authorized result
+    G-->>C: Response
+    Note over S,A: Invalid session: 401; denied company/permissions: 403.<br/>Auth lookup timeout/unavailability: 503; request is denied.
+    Note over C,A: Direct auth endpoints validate against MySQL locally.<br/>They do not call /auth/me recursively.

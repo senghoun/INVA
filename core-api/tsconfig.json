@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@common": ["libs/common/src", "libs/common/src/index"],
+      "@common/*": ["libs/common/src/*"],
+      "@contracts": ["libs/contracts/src", "libs/contracts/src/index"],
+      "@contracts/*": ["libs/contracts/src/*"],
+      "@auth/*": ["apps/auth-service/src/*"],
+      "@hr/*": ["apps/hr-service/src/*"],
+      "@crm/*": ["apps/crm-service/src/*"],
+      "@ac/*": ["apps/ac-service/src/*"],
+      "@it/*": ["apps/it-service/src/*"]
+    }
+  }
+}

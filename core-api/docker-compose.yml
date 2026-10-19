@@ -1,0 +1,51 @@
+# PostgreSQL 17 with one database per domain, plus Redis.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: inva_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-inva}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: postgres
+      POSTGRES_AUTH_DB: ${POSTGRES_AUTH_DB:-inva_auth_db}
+      POSTGRES_HR_DB: ${POSTGRES_HR_DB:-inva_hr_db}
+      POSTGRES_AC_DB: ${POSTGRES_AC_DB:-inva_ac_db}
+      POSTGRES_CRM_DB: ${POSTGRES_CRM_DB:-inva_crm_db}
+      POSTGRES_IT_DB: ${POSTGRES_IT_DB:-inva_it_db}
+      POSTGRES_PV_DB: ${POSTGRES_PV_DB:-inva_pv_db}
+    ports:
+      - '127.0.0.1:${DATABASE_PORT:-5432}:5432'
+    volumes:
+      - postgres17_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sh:/docker-entrypoint-initdb.d/01_init_databases.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: inva_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres17_data:
+    driver: local
+  redis_data:
+    driver: local

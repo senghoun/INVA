@@ -1,0 +1,83 @@
+// =============================================================================
+// prisma/ac/schema.prisma — Accounting Domain
+// Database: inva_ac_db
+// dealId / clientOrgId: UUID stored as plain string — no cross-DB FK
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-ac"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_AC_URL")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+model Invoice {
+  id            String        @id @default(uuid()) @db.Uuid
+  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(32)
+  /// UUID of crm.Deal — no cross-DB FK
+  dealId        String        @map("deal_id") @db.Uuid
+  /// UUID of crm.ClientOrganization — no cross-DB FK
+  clientOrgId   String        @map("client_org_id") @db.Uuid
+  status        InvoiceStatus @default(DRAFT)
+  totalAmount   Decimal       @map("total_amount") @db.Decimal(18, 4)
+  currency      String        @default("USD") @db.VarChar(3)
+  issuedAt      DateTime?     @map("issued_at")
+  dueDate       DateTime?     @map("due_date") @db.Date
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  items         InvoiceItem[]
+  ledgerEntries GeneralLedgerEntry[]
+
+  @@index([clientOrgId])
+  @@index([dealId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @map("invoice_id") @db.Uuid
+  description String   @db.VarChar(255)
+  quantity    Decimal  @db.Decimal(10, 4)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(18, 4)
+  lineTotal   Decimal  @map("line_total") @db.Decimal(18, 4)
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model GeneralLedgerEntry {
+  id          String          @id @default(uuid()) @db.Uuid
+  invoiceId   String          @map("invoice_id") @db.Uuid
+  entryType   LedgerEntryType @map("entry_type")
+  accountCode String          @map("account_code") @db.VarChar(32)
+  amount      Decimal         @db.Decimal(18, 4)
+  description String          @db.VarChar(255)
+  recordedAt  DateTime        @default(now()) @map("recorded_at")
+  /// UUID of auth.User who approved — no cross-DB FK
+  recordedBy  String          @map("recorded_by") @db.Uuid
+
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@index([accountCode])
+  @@map("general_ledger_entries")
+}

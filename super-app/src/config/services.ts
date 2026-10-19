@@ -1,0 +1,66 @@
+import { MicroserviceConfig } from '../types';
+import { env } from './env';
+import { API_ROUTES, API_VERSION } from './api';
+
+export const KNOWN_MICROSERVICES: MicroserviceConfig[] = [
+  {
+    key: env.services.gateway.key,
+    name: env.services.gateway.name,
+    port: env.services.gateway.port,
+    url: env.services.gateway.url,
+    proxyPrefix: API_VERSION,
+    tag: 'gateway',
+    description: 'Central Fastify Reverse Proxy Hub with rate limiting & unified swagger router',
+    category: 'core',
+  },
+  {
+    key: env.services.auth.key,
+    name: env.services.auth.name,
+    port: env.services.auth.port,
+    url: env.services.auth.url,
+    proxyPrefix: API_ROUTES.AUTH,
+    tag: 'auth',
+    description: 'PostgreSQL inva_auth_db, JWT tokens, RBAC roles & user administration',
+    category: 'core',
+  },
+  {
+    key: env.services.hr.key,
+    name: env.services.hr.name,
+    port: env.services.hr.port,
+    url: env.services.hr.url,
+    proxyPrefix: API_ROUTES.HR,
+    tag: 'hr',
+    description: 'Employee profiles, organizational departments & hierarchy trees',
+    category: 'business',
+  },
+  {
+    key: env.services.crm.key,
+    name: env.services.crm.name,
+    port: env.services.crm.port,
+    url: env.services.crm.url,
+    proxyPrefix: API_ROUTES.CRM,
+    tag: 'crm',
+    description: 'Sales deals, customer organizations & self-service client portal',
+    category: 'business',
+  },
+  {
+    key: env.services.ac.key,
+    name: env.services.ac.name,
+    port: env.services.ac.port,
+    url: env.services.ac.url,
+    proxyPrefix: API_ROUTES.AC,
+    tag: 'ac',
+    description: 'Accounts receivable/payable, invoice generation & general ledger sync',
+    category: 'business',
+  },
+  {
+    key: env.services.it.key,
+    name: env.services.it.name,
+    port: env.services.it.port,
+    url: env.services.it.url,
+    proxyPrefix: API_ROUTES.IT,
+    tag: 'it',
+    description: 'Hardware asset inventory, IT helpdesk tickets & system infrastructure',
+    category: 'operations',
+  },
+];

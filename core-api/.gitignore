@@ -1,0 +1,17 @@
+# Local credentials and encryption keys
+.env
+.env.*
+!.env.example
+
+# Generated files
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+
+# Project-owned local databases and Redis data
+.local/
+
+# macOS metadata
+.DS_Store

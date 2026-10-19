@@ -1,0 +1,19 @@
+# ── never commit these ──
+node_modules/
+dist/
+.local/
+coverage/
+*.tsbuildinfo
+
+# env & secrets (per-app .gitignore also covers this; belt & suspenders)
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# macOS / editor
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

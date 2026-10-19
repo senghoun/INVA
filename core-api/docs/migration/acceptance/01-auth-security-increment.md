@@ -1,0 +1,24 @@
+> Historical implementation evidence. Test suites, test commands and temporary verification scripts referenced here were removed during the 2026-10-14 project cleanup. Current checks are documented in [PostgreSQL setup](../../postgresql-setup.md).
+
+# Auth security implementation increment
+
+Date: 2026-10-01. Status: IMPLEMENTED; full Phase 01 remains in progress.
+
+The user requested implementation of the entire v3 pack, then clarified that this is a new platform. This authorizes continued reversible local implementation across numbered slices; it supersedes earlier per-slice review pauses. It does not authorize deployment, live payment execution, or sending invitations/messages. No legacy source import is required.
+
+Changes:
+
+- Retain one existing Auth service. New passwords use Argon2id (memory 19,456 KiB, iterations 2, parallelism 1); existing bcrypt credentials verify and upgrade after successful login. Concurrent credential changes reject issuance.
+- Public self-registration disabled by default. Existing administrator account creation and temporary-password change remain supported.
+- Browser sessions use HttpOnly, SameSite=Strict refresh cookies, Secure in production, path `/api/v1/auth`. Refresh token values leave JSON browser responses. Access tokens live in memory; sessionStorage contains only a non-secret reload marker. Old persisted tokens/profile cache are removed. Exact allowed origins plus a required custom client header protect cookie requests. Portal and API must use the same site; local development uses one hostname consistently.
+- Bearer clients retain explicit JSON refresh/logout contracts. Access JWT validation requires HS256, `iss=inva-auth`, `aud=inva-api`, current account and session status. Refresh JWTs use a distinct secret and `aud=inva-refresh`. Existing access tokens without these claims require sign-in again.
+- TOTP enrollment requires the current password. Pending seeds expire after five minutes and are encrypted with AES-256-GCM using `MFA_ENCRYPTION_KEY` stored outside PostgreSQL. Enabled MFA cannot be overwritten by enrollment. Account/password changes invalidate pending enrollment and login challenges.
+- MFA login produces only a restricted five-minute challenge. Verification is serialized per user; five failed attempts exhaust a challenge. Used TOTP counters and recovery codes cannot replay. Ten random 128-bit recovery codes are shown once and stored only as hashes. Enabling MFA revokes existing sessions; unverified sessions cannot satisfy enabled MFA.
+- Account security UI supports enrollment, local QR rendering, recovery-code login, active-session listing and per-session/global revocation. No authenticator secret is sent to a QR service. Session list reports sign-in/expiry times; device fingerprints are not implemented.
+- TanStack Query provider clears cached account data on sign-out/account changes; account-session queries include user identity. React Hook Form + Zod validate enrollment password input. Domain workspaces load through React lazy/Suspense, reducing the entry bundle below the previous 500 kB warning.
+
+Migrations: `20261001100000_mfa_credentials` adds credentials/challenges/session assurance fields; `20261001110000_role_status` adds the pre-existing Prisma Role.isActive contract missing from migration history. Historical migration files were preserved. Applied only to disposable `inva_pack_auth_test` on local port 55439, not application/production databases. Secrets are generated inside test fixtures and are never written into the repository.
+
+Evidence: 93 backend unit/boundary tests pass; 37 portal tests pass. Eleven real PostgreSQL + Fastify integration tests pass: long password distinction, bcrypt upgrade, cookie rotation/concurrent replay, origin/header rejection, encrypted MFA enrollment/recovery replay/session revocation, five-attempt exhaustion, session ownership. The integration suite is skipped unless an explicitly named local test database is supplied. Runner: `AUTH_TEST_DATABASE_URL=... npm run test:auth:postgres`. Two Chrome journeys now pass through the isolated portal/gateway/Auth/HR stack; see the company-scope acceptance report. Six service builds, backend lint/typecheck, portal typecheck/build pass in the final checks on 2026-10-02.
+
+Outstanding: company memberships/scoped grants and switcher; invitations/ownership verification and delivery configuration; WebAuthn/passkeys; controlled authenticator replacement and lost-factor recovery; action-bound step-up; broader account/network MFA abuse limits and credential-change notification; service credentials; Auth database readiness; complete two-company/browser/upgrade/restore/key-rotation acceptance. This increment does not constitute completion of Phase 01 or the prompt pack. Statutory payroll rules and payment provider remain unspecified; live calculations/payments must not use invented rules.

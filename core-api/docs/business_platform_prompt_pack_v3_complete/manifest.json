@@ -1,0 +1,156 @@
+{
+  "title": "Business Platform Migration Prompt Pack",
+  "version": "3.0",
+  "prepared": "2026-10-01",
+  "artifact_type": "instruction_pack_not_application_code",
+  "required_stack": [
+    "NestJS",
+    "React",
+    "TypeScript",
+    "PostgreSQL"
+  ],
+  "numbered_phases": 13,
+  "markdown_files": 28,
+  "files": [
+    {
+      "path": "API_EVENT_CONVENTIONS.md",
+      "bytes": 6400,
+      "sha256": "bb2bc8a7adc24dbc9bd918e0a7799e61a7927e24bdda83093512eaf62e96e9b1"
+    },
+    {
+      "path": "ARCHITECTURE_DECISION_GATE.md",
+      "bytes": 5360,
+      "sha256": "3674c7604dcb25bb71a29d952ae7c6507cd83b39fe370b830fa99a4514451661"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 2998,
+      "sha256": "5f25f0815bb711795146db57a8b383019951ed1804928db91ab43b507d3ba3f2"
+    },
+    {
+      "path": "FULL_PROMPT_PACK.md",
+      "bytes": 152985,
+      "sha256": "e05d68bb4d4e68f1bb99991dfd17c3583b75457317de767765fbd59356e25362"
+    },
+    {
+      "path": "MASTER_PROMPT.md",
+      "bytes": 31671,
+      "sha256": "1143e3f356be3ef668c4c6fd18b5766282a5a992e6d7f4ec74f889d06f30e80b"
+    },
+    {
+      "path": "MASTER_PROMPT_V3_STANDALONE.md",
+      "bytes": 31671,
+      "sha256": "1143e3f356be3ef668c4c6fd18b5766282a5a992e6d7f4ec74f889d06f30e80b"
+    },
+    {
+      "path": "OWNERSHIP_AND_DEPENDENCIES.md",
+      "bytes": 7490,
+      "sha256": "5004732cb558cbe7df72876ac2bedebba81cd566c0cf3937d4d3769516e7a1b1"
+    },
+    {
+      "path": "PHASE_00_AUDIT.md",
+      "bytes": 6554,
+      "sha256": "d20315a7782cede09c60684b232f4394b6cbaf96cdfb6a10097ec2f16e1e770b"
+    },
+    {
+      "path": "PHASE_01_AUTH.md",
+      "bytes": 9513,
+      "sha256": "5c51e4ca525db8ddb9735b091e581f42dba83ac2917a1860cf3a96ff9e3f9ab6"
+    },
+    {
+      "path": "PHASE_02_SHARED_SERVICES.md",
+      "bytes": 8554,
+      "sha256": "6501b834df250e47670480a39807f5ab131d60cad2e83ca0aadbf6543ed5dcd6"
+    },
+    {
+      "path": "PHASE_03_HR.md",
+      "bytes": 7120,
+      "sha256": "f1dcec36e8a1707feacebf4f4dc0f10c8e617a5e22b68ee6756173bc1fab5add"
+    },
+    {
+      "path": "PHASE_04_ACCOUNTING.md",
+      "bytes": 6254,
+      "sha256": "210db3a0c338f97a2cdde516cf8c59774a7b6dd3b32d4b94f22832967d7cd369"
+    },
+    {
+      "path": "PHASE_05_PAYMENTS.md",
+      "bytes": 4743,
+      "sha256": "97aa9700fd3fa3fa07a4ddf2d6e0cacf8ff256c959d2fec36be5578f9b5c5f7b"
+    },
+    {
+      "path": "PHASE_06_CUSTOMERS.md",
+      "bytes": 3975,
+      "sha256": "3eb72a9048f7f78bd135c4cccd74f996d906fc279988253dc31569bbae2e84a3"
+    },
+    {
+      "path": "PHASE_07_PROPERTIES.md",
+      "bytes": 3726,
+      "sha256": "be69ec3f2e20e8aff7accc2750b8de4ec3be7b92b3fb422dbd47199c1387f05c"
+    },
+    {
+      "path": "PHASE_08_CRM.md",
+      "bytes": 3801,
+      "sha256": "08d9805f30d50c88ad5d48624fb56735f5081523cd86aad9deba33176e777276"
+    },
+    {
+      "path": "PHASE_09_VALUATION.md",
+      "bytes": 4221,
+      "sha256": "7f91f75d6ce756407003078c6e105e035e7c2ae61256ed093d984cd72d13c5c8"
+    },
+    {
+      "path": "PHASE_10_SALES.md",
+      "bytes": 3561,
+      "sha256": "bac37b4ec55563e17352e8682678be8c9c94d2d53ac3b2f6e3c7c6cc477bb1cb"
+    },
+    {
+      "path": "PHASE_11_REPORTING.md",
+      "bytes": 3623,
+      "sha256": "f5b20c668b5ec4c6840a665f91de4ee5f564aeae01cc78d6bb56928b7133caaf"
+    },
+    {
+      "path": "PHASE_12_CUTOVER.md",
+      "bytes": 4528,
+      "sha256": "cf251e835fb340d4997f49a1f3495a71af6e5106c6ac4f6c24aa774618b9f3d8"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6192,
+      "sha256": "0a5351d0d0cc3d11a5e45ebfaaa358e5983d67b8ea226e5192f3e00de8d4c273"
+    },
+    {
+      "path": "RELEASE_CHECKLIST.md",
+      "bytes": 5963,
+      "sha256": "280c8b7b34c2beff5cf72e70205331be33496a67f3d558a78a6a1e44dc665cd3"
+    },
+    {
+      "path": "SOURCES.md",
+      "bytes": 5185,
+      "sha256": "12f437fb75adadbaf0caacb4d9720cdb35b0a3d102877e76f979d0f4b5f5d60f"
+    },
+    {
+      "path": "START_HERE.md",
+      "bytes": 4186,
+      "sha256": "13db9db4ba817eaa3fdc92ed1d9523b4b859d39570e36a4c62a4aaf9d329f257"
+    },
+    {
+      "path": "VERSION_3_NOTES.md",
+      "bytes": 1036,
+      "sha256": "32704c62d4a883bab821cb447dff9a98d52d51b259fd720fbc9248b4021b2f79"
+    },
+    {
+      "path": "templates/ADR_TEMPLATE.md",
+      "bytes": 1544,
+      "sha256": "ba2b0fcce84e4ada9d5834318e3e01d3cfe26811886cf14de146d96c23d2f4e4"
+    },
+    {
+      "path": "templates/PHASE_ACCEPTANCE_TEMPLATE.md",
+      "bytes": 2062,
+      "sha256": "6e9514c3f631fd66d224f607295014bd1f43e33eae999d4dd7fec19ef839608e"
+    },
+    {
+      "path": "templates/PROGRESS_TEMPLATE.md",
+      "bytes": 1499,
+      "sha256": "1b26b46321a3436eed0fe2a9708272eaeefcdddc180cdd41e88cfe98e1138f35"
+    }
+  ]
+}

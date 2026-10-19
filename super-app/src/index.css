@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #0a0d14;
+    --color-surface: #101522;
+    --color-card: #141b2d;
+    --color-border: #1e293b;
+  }
+
+  body {
+    background-color: #0a0d14;
+    color: #f1f5f9;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Avoid native click outlines/tap flashes against the dark theme. */
+  button, input, select, textarea, a, [role='button'] {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Keyboard navigation keeps a theme-colored indicator. */
+  button:focus-visible, select:focus-visible, a:focus-visible, [role='button']:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 2px;
+  }
+}
+
+/* Suppress native browser datalist arrow indicator and clear buttons */
+input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+input::-webkit-search-cancel-button,
+input::-webkit-search-decoration {
+  -webkit-appearance: none !important;
+  display: none !important;
+}
+
+/* Glassmorphism card utilities */
+.glass-panel {
+  background: rgba(16, 21, 34, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(20, 27, 45, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.12);
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.35);
+}
+
+.glow-red {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+}
+
+/* Modal Smooth Animations */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalContentPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-backdrop-animate {
+  animation: modalBackdropFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-dialog-animate {
+  animation: modalContentPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gemini Sparkle & Thinking Wave Animations */
+@keyframes geminiPulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes geminiShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes geminiRotateGradient {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.gemini-dot-1 {
+  animation: geminiPulse 1.4s infinite cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  animation-delay: 0s;
+}
+
+.gemini-dot-2 {
+  animation: geminiPulse 1.4s infinite cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  animation-delay: 0.22s;
+}
+
+.gemini-dot-3 {
+  animation: geminiPulse 1.4s infinite cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  animation-delay: 0.44s;
+}
+
+.gemini-shimmer-text {
+  background: linear-gradient(90deg, #818cf8 0%, #38bdf8 30%, #c084fc 60%, #818cf8 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: geminiShimmer 3s linear infinite;
+}
+
+.gemini-gradient-border {
+  background: linear-gradient(90deg, #4f46e5, #06b6d4, #a855f7, #4f46e5);
+  background-size: 300% 300%;
+  animation: geminiShimmer 4s ease infinite;
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0d14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252e42;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4763;
+}

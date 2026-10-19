@@ -1,0 +1,370 @@
+// =============================================================================
+// prisma/hr/schema.prisma — Human Resources Domain
+// Database: inva_hr_db
+// auth_user_id: UUID stored as plain string — no cross-DB FK constraint
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-hr"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_HR_URL")
+}
+
+// ─── Organization Hierarchy ───────────────────────────────────────────────────
+
+model Company {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @db.VarChar(150)
+  code      String     @unique @db.VarChar(32)
+  logo      String?    @db.VarChar(500)
+  email     String?    @db.VarChar(150)
+  phone     String?    @db.VarChar(50)
+  website   String?    @db.VarChar(255)
+  address   String?    @db.VarChar(500)
+  status    String     @default("ACTIVE") @db.VarChar(20) // ACTIVE, INACTIVE
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  branches    Branch[]
+  departments Department[]
+  employees   EmployeeProfile[]
+
+  @@map("companies")
+}
+
+model Branch {
+  id           String     @id @default(uuid()) @db.Uuid
+  companyId    String     @map("company_id") @db.Uuid
+  name         String     @db.VarChar(150)
+  code         String     @db.VarChar(32)
+  address      String?    @db.VarChar(500)
+  latitude     Float?
+  longitude    Float?
+  radiusMeters Float?    @default(100.0) @map("radius_meters")
+  status       String     @default("ACTIVE") @db.VarChar(20)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  departments Department[]
+  employees   EmployeeProfile[]
+
+  @@unique([companyId, code])
+  @@map("branches")
+}
+
+model Department {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @db.VarChar(128)
+  code        String           @unique @db.VarChar(32)
+  companyId   String?          @map("company_id") @db.Uuid
+  branchId    String?          @map("branch_id") @db.Uuid
+  parentId    String?          @map("parent_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  company     Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  branch      Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  parent      Department?      @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children    Department[]     @relation("DeptHierarchy")
+  positions   Position[]
+  sectors     Sector[]
+  employees   EmployeeProfile[]
+
+  @@map("departments")
+}
+
+model Position {
+  id           String     @id @default(uuid()) @db.Uuid
+  departmentId String?    @map("department_id") @db.Uuid
+  name         String     @db.VarChar(128)
+  code         String     @unique @db.VarChar(32)
+  level        Int?       @default(1)
+  description  String?    @db.VarChar(500)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  employees    EmployeeProfile[]
+
+  @@map("positions")
+}
+
+model Sector {
+  id           String     @id @default(uuid()) @db.Uuid
+  departmentId String?    @map("department_id") @db.Uuid
+  name         String     @db.VarChar(128)
+  code         String?    @db.VarChar(32)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  employees    EmployeeProfile[]
+
+  @@map("sectors")
+}
+
+model EmploymentType {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @unique @db.VarChar(64)
+  code        String     @unique @db.VarChar(32)
+  description String?    @db.VarChar(255)
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  employees   EmployeeProfile[]
+
+  @@map("employment_types")
+}
+
+// ─── Employee Profiles ────────────────────────────────────────────────────────
+
+model EmployeeProfile {
+  id                String     @id @default(uuid()) @db.Uuid
+  /// UUID of auth.User — stored as plain UUID, optional to support un-onboarded staff
+  authUserId        String?    @unique @map("auth_user_id") @db.Uuid
+  employeeCode      String     @unique @map("employee_code") @db.VarChar(32)
+  firstName         String     @map("first_name") @db.VarChar(100)
+  lastName          String     @map("last_name") @db.VarChar(100)
+  englishName       String?    @map("english_name") @db.VarChar(200)
+  khmerName         String?    @map("khmer_name") @db.VarChar(200)
+  gender            String?    @db.VarChar(20) // MALE, FEMALE, OTHER
+  dob               DateTime?  @db.Date
+  phone             String?    @db.VarChar(50)
+  email             String?    @db.VarChar(150)
+  address           String?    @db.VarChar(500)
+  nationalId        String?    @map("national_id") @db.VarChar(50)
+  maritalStatus     String?    @map("marital_status") @db.VarChar(30)
+  emergencyContact  String?    @map("emergency_contact") @db.VarChar(200)
+  emergencyPhone    String?    @map("emergency_phone") @db.VarChar(50)
+  jobTitle          String     @map("job_title") @db.VarChar(128)
+
+  companyId         String?    @map("company_id") @db.Uuid
+  branchId          String?    @map("branch_id") @db.Uuid
+  departmentId      String?    @map("department_id") @db.Uuid
+  positionId        String?    @map("position_id") @db.Uuid
+  sectorId          String?    @map("sector_id") @db.Uuid
+  employmentTypeId  String?    @map("employment_type_id") @db.Uuid
+  managerId         String?    @map("manager_id") @db.Uuid
+  leaderId          String?    @map("leader_id") @db.Uuid
+  workingScheduleId String?    @map("working_schedule_id") @db.Uuid
+
+  hireDate          DateTime   @map("hire_date") @db.Date
+  probationEnd      DateTime?  @map("probation_end") @db.Date
+  resignDate        DateTime?  @map("resign_date") @db.Date
+
+  bankName          String?    @map("bank_name") @db.VarChar(100)
+  bankAccountNumber String?    @map("bank_account_number") @db.VarChar(50)
+  baseSalary        Float?     @default(0) @map("base_salary")
+
+  isActive          Boolean    @default(true) @map("is_active")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  company           Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  branch            Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  department        Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position          Position?       @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  sector            Sector?         @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  employmentType    EmploymentType? @relation(fields: [employmentTypeId], references: [id], onDelete: SetNull)
+  workingSchedule   WorkingSchedule? @relation(fields: [workingScheduleId], references: [id], onDelete: SetNull)
+
+  manager           EmployeeProfile?  @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates      EmployeeProfile[] @relation("ManagerSubordinates")
+  leader            EmployeeProfile?  @relation("LeaderSubordinates", fields: [leaderId], references: [id])
+  teamMembers       EmployeeProfile[] @relation("LeaderSubordinates")
+
+  hrRoles EmployeeHrRole[]
+  attendanceRecords AttendanceRecord[]
+  lateRequests      LateAttendanceRequest[]
+  leaveEntitlements LeaveEntitlement[]
+  leaveRequests     LeaveRequest[]
+
+  @@index([companyId, isActive, createdAt])
+  @@index([companyId, branchId, isActive])
+  @@index([departmentId, isActive])
+  @@index([isActive, createdAt])
+  @@map("employee_profiles")
+}
+
+// ─── Time & Attendance ────────────────────────────────────────────────────────
+
+model WorkingSchedule {
+  id               String     @id @default(uuid()) @db.Uuid
+  title            String     @db.VarChar(128)
+  type             String     @default("STANDARD") @db.VarChar(32) // STANDARD, SHIFT, FLEXIBLE
+  workingDays      Json    @default("[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"]") @map("working_days")
+  checkInTime      String     @default("08:00") @map("check_in_time") @db.VarChar(8)
+  checkOutTime     String     @default("17:00") @map("check_out_time") @db.VarChar(8)
+  lateGraceMinutes Int        @default(15) @map("late_grace_minutes")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  employees        EmployeeProfile[]
+
+  @@map("working_schedules")
+}
+
+model AttendanceRecord {
+  id           String     @id @default(uuid()) @db.Uuid
+  employeeId   String     @map("employee_id") @db.Uuid
+  date         DateTime   @db.Date
+  checkInTime  DateTime?  @map("check_in_time")
+  checkOutTime DateTime?  @map("check_out_time")
+  checkInLat   Float?     @map("check_in_lat")
+  checkInLng   Float?     @map("check_in_lng")
+  checkOutLat  Float?     @map("check_out_lat")
+  checkOutLng  Float?     @map("check_out_lng")
+  status       String     @default("PRESENT") @db.VarChar(32) // PRESENT, LATE, HALF_DAY, ABSENT, ON_LEAVE
+  isLate       Boolean    @default(false) @map("is_late")
+  lateMinutes  Int        @default(0) @map("late_minutes")
+  checkOutNotes String? @map("check_out_notes") @db.VarChar(500)
+  notes        String?    @db.VarChar(500)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  employee     EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  lateRequests LateAttendanceRequest[]
+
+  @@unique([employeeId, date])
+  @@map("attendance_records")
+}
+
+model LateAttendanceRequest {
+  id                 String     @id @default(uuid()) @db.Uuid
+  employeeId         String     @map("employee_id") @db.Uuid
+  attendanceRecordId String?    @map("attendance_record_id") @db.Uuid
+  date               DateTime   @db.Date
+  expectedArrival    String?    @map("expected_arrival") @db.VarChar(8)
+  reason             String     @db.VarChar(500)
+  status             String     @default("PENDING") @db.VarChar(32) // PENDING, APPROVED, REJECTED, CANCELLED
+  approvedBy         String?    @map("approved_by") @db.VarChar(128)
+  decisionNotes      String?    @map("decision_notes") @db.VarChar(500)
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  employee           EmployeeProfile   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  attendanceRecord   AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id], onDelete: SetNull)
+
+  @@map("late_attendance_requests")
+}
+
+// ─── Leave Management ─────────────────────────────────────────────────────────
+
+model LeaveType {
+  id                 String     @id @default(uuid()) @db.Uuid
+  name               String     @unique @db.VarChar(64)
+  code               String     @unique @db.VarChar(32)
+  defaultDaysPerYear Int        @default(18) @map("default_days_per_year")
+  isPaid             Boolean    @default(true) @map("is_paid")
+  allowCarryover     Boolean    @default(false) @map("allow_carryover")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  entitlements       LeaveEntitlement[]
+  requests           LeaveRequest[]
+
+  @@map("leave_types")
+}
+
+model LeaveEntitlement {
+  id            String     @id @default(uuid()) @db.Uuid
+  employeeId    String     @map("employee_id") @db.Uuid
+  leaveTypeId   String     @map("leave_type_id") @db.Uuid
+  year          Int
+  totalDays     Float      @default(0) @map("total_days")
+  usedDays      Float      @default(0) @map("used_days")
+  remainingDays Float      @default(0) @map("remaining_days")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  employee      EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType     LeaveType       @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@map("leave_entitlements")
+}
+
+model LeaveRequest {
+  id           String     @id @default(uuid()) @db.Uuid
+  employeeId   String     @map("employee_id") @db.Uuid
+  leaveTypeId  String     @map("leave_type_id") @db.Uuid
+  startDate    DateTime   @map("start_date") @db.Date
+  endDate      DateTime   @map("end_date") @db.Date
+  durationDays Float      @map("duration_days")
+  reason       String     @db.VarChar(500)
+  status       String     @default("PENDING") @db.VarChar(32) // PENDING, APPROVED, REJECTED, CANCELLED
+  approvedBy   String?    @map("approved_by") @db.VarChar(128)
+  reviewNotes  String?    @map("review_notes") @db.VarChar(500)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  employee     EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType    LeaveType       @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@map("leave_requests")
+}
+
+// ─── HR Domain Configuration ────────────────────────────────────────────────
+
+model HrConfig {
+  id                  String   @id @default(uuid()) @db.Uuid
+  portalDomain        String   @default("hr.invaestate.com") @map("portal_domain") @db.VarChar(128)
+  portalTitle         String   @default("INVA HR Portal") @map("portal_title") @db.VarChar(128)
+  workDays            Json  @default("[\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"]") @map("work_days")
+  dailyWorkHours      Float    @default(8.0) @map("daily_work_hours")
+  clockInGraceMinutes Int      @default(15) @map("clock_in_grace_minutes")
+  annualLeaveDays     Int      @default(18) @map("annual_leave_days")
+  sickLeaveDays       Int      @default(14) @map("sick_leave_days")
+  allowLeaveCarryover Boolean  @default(true) @map("allow_leave_carryover")
+  payrollFrequency    String   @default("MONTHLY") @map("payroll_frequency") @db.VarChar(32)
+  payrollCutoffDay    Int      @default(25) @map("payroll_cutoff_day")
+  currency            String   @default("USD") @db.VarChar(10)
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  updatedBy           String?  @map("updated_by") @db.VarChar(320)
+
+  @@map("hr_configs")
+}
+
+// ─── HR Domain Roles & Permissions ──────────────────────────────────────────
+
+model EmployeeHrRole {
+  employeeId String @map("employee_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+  employee EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  role HrRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@id([employeeId, roleId])
+  @@map("employee_hr_roles")
+}
+
+model HrRole {
+  employees EmployeeHrRole[]
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(64)
+  description String?  @db.VarChar(255)
+  permissions Json  @default("[]")
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("hr_roles")
+}
+
+// Append-only business evidence, retained independently of employee deletion.
+model HrLeaveEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String?  @map("company_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  resourceId String   @map("resource_id") @db.Uuid
+  action     String   @db.VarChar(64)
+  actor      String?  @db.VarChar(128)
+  metadata   Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([companyId, createdAt])
+  @@index([resourceId, createdAt])
+  @@map("hr_leave_events")
+}

@@ -1,0 +1,271 @@
+// =============================================================================
+// prisma/auth/schema.prisma — Authentication Domain
+// Database: inva_auth_db
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-auth"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_AUTH_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserType {
+  INTERNAL
+  EXTERNAL
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String?   @unique @db.VarChar(320)
+  firstName    String?   @map("first_name") @db.VarChar(100)
+  lastName     String?   @map("last_name") @db.VarChar(100)
+  gender       String?   @db.VarChar(16)
+  image        String?   @db.VarChar(2048)
+  language     String    @default("en") @db.VarChar(10)
+  telegramChatId String? @unique @map("telegram_chat_id") @db.VarChar(32)
+  telegramRecoveryLinks TelegramRecoveryLink[]
+  legacyUserId Int?      @unique @map("legacy_user_id")
+  legacyMetadata Json?   @map("legacy_metadata")
+  phone        String?   @unique @db.VarChar(16)
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  temporaryPasswordExpiresAt DateTime? @map("temporary_password_expires_at")
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  userType     UserType  @default(EXTERNAL) @map("user_type")
+  mfaEnabled   Boolean   @default(false) @map("mfa_enabled")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  userRoles    UserRole[]
+  mfaCredential MfaCredential?
+  challenges AuthChallenge[]
+  passwordResetChallenges PasswordResetChallenge[]
+  companyMemberships CompanyMembership[]
+
+  @@index([isActive, createdAt])
+  @@index([userType, isActive])
+  @@index([isActive, userType, createdAt])
+  @@map("users")
+}
+
+model OAuthClient {
+  id           String   @id @default(uuid()) @db.Uuid
+  clientId     String   @unique @map("client_id") @db.VarChar(128)
+  clientSecret String   @map("client_secret") @db.VarChar(255)
+  name         String   @db.VarChar(128)
+  redirectUris Json  @map("redirect_uris") @default("[]")
+  scopes       Json  @default("[]")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("oauth_clients")
+}
+
+model Role {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @unique @db.VarChar(64)
+  description String?    @db.VarChar(255)
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  mfaVerified Boolean @default(false) @map("mfa_verified")
+  authenticationAt DateTime @default(now()) @map("authentication_at")
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([userId, revokedAt, expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ─── Global Security Policy & Domain Restrictions ────────────────────────────
+
+model SecurityPolicy {
+  id                       String   @id @default(uuid()) @db.Uuid
+  // Rate Limiting
+  rateLimitEnabled         Boolean  @default(true) @map("rate_limit_enabled")
+  rateLimitMaxAttempts     Int      @default(5) @map("rate_limit_max_attempts")
+  rateLimitWindowSeconds   Int      @default(900) @map("rate_limit_window_seconds")
+  rateLimitLockoutSeconds  Int      @default(900) @map("rate_limit_lockout_seconds")
+
+  // IP Restriction (DISABLED | ALLOWLIST | BLOCKLIST)
+  ipRestrictionMode        String   @default("DISABLED") @map("ip_restriction_mode") @db.VarChar(32)
+  ipAllowlist              Json  @default("[]") @map("ip_allowlist")
+  ipBlocklist              Json  @default("[]") @map("ip_blocklist")
+
+  // Domain Restrictions
+  domainRestrictionEnabled Boolean  @default(false) @map("domain_restriction_enabled")
+  allowedDomains           Json  @default("[]") @map("allowed_domains")
+
+  // Service-Domain Bindings (JSON: {"hr-service": ["hr.invaestate.com", "super.invaestate.com"], ...})
+  serviceDomainMap         Json?    @map("service_domain_map")
+
+  // Session Policy
+  accessTokenTtlSeconds    Int      @default(900) @map("access_token_ttl_seconds")
+  refreshTokenTtlSeconds   Int      @default(604800) @map("refresh_token_ttl_seconds")
+  maxConcurrentSessions    Int      @default(0) @map("max_concurrent_sessions")
+
+  updatedAt                DateTime @updatedAt @map("updated_at")
+  updatedBy                String?  @map("updated_by") @db.VarChar(320)
+
+  @@map("security_policies")
+}
+
+// ─── Security Audit Log ──────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  timestamp DateTime @default(now())
+  userEmail String?  @map("user_email") @db.VarChar(320)
+  action    String   @db.VarChar(64)
+  outcome   String   @db.VarChar(32) // SUCCESS, FAILED, BLOCKED, PENDING
+  ip        String   @db.VarChar(64)
+  country   String?  @db.VarChar(64)
+  userAgent String?  @map("user_agent") @db.VarChar(512)
+  details   Json?
+
+  @@index([timestamp])
+  @@index([userEmail])
+  @@index([action])
+  @@index([ip, timestamp])
+  @@index([userEmail, timestamp])
+  @@map("audit_logs")
+}
+
+
+model MfaCredential {
+  userId String @id @map("user_id") @db.Uuid
+  secretEncrypted String @map("secret_encrypted") @db.Text
+  verifiedAt DateTime? @map("verified_at")
+  setupExpiresAt DateTime @map("setup_expires_at")
+  lastCounter BigInt @default(-1) @map("last_counter")
+  recoveryHashes Json  @default("[]") @map("recovery_hashes")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("mfa_credentials")
+}
+
+model AuthChallenge {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  purpose String @db.VarChar(32)
+  attempts Int @default(0)
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, purpose, expiresAt])
+  @@map("auth_challenges")
+}
+
+model CompanyMembership {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  branchIds Json  @default("[]") @map("branch_ids") 
+  permissions Json  @default("[]")
+  isActive Boolean @default(true) @map("is_active")
+  grantedBy String @map("granted_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@map("company_memberships")
+}
+
+// One shared Telegram destination for API monitoring. Bot token is AES-GCM ciphertext.
+model TelegramSettings {
+  id String @id @default("global")
+  enabled Boolean @default(false)
+  commandsEnabled Boolean @default(false) @map("commands_enabled")
+  adminUserIds Json  @default("[]") @map("admin_user_ids")
+  nextUpdateOffset Int @default(0) @map("next_update_offset")
+  botTokenEncrypted String? @map("bot_token_encrypted") @db.Text
+  botUsername String? @map("bot_username") @db.VarChar(64)
+  chatId String @default("") @map("chat_id") @db.VarChar(32)
+  messageThreadId Int? @map("message_thread_id")
+  topicRoutes Json @default("[]") @map("topic_routes")
+  cooldownSeconds Int @default(60) @map("cooldown_seconds")
+  maxPerMinute Int @default(20) @map("max_per_minute")
+  failureThreshold Int @default(10) @map("failure_threshold")
+  failureWindowSeconds Int @default(60) @map("failure_window_seconds")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String? @map("updated_by") @db.VarChar(320)
+
+  @@map("telegram_settings")
+}
+
+model TelegramUnblockConfirmation {
+  id String @id @db.VarChar(32)
+  policyId String @map("policy_id") @db.Uuid
+  rule String @db.VarChar(64)
+  actorId String @map("actor_id") @db.VarChar(20)
+  chatId String @map("chat_id") @db.VarChar(32)
+  messageThreadId Int? @map("message_thread_id")
+  botFingerprint String @map("bot_fingerprint") @db.VarChar(64)
+  expiresAt DateTime @map("expires_at")
+  @@index([expiresAt])
+  @@map("telegram_unblock_confirmations")
+}
+
+// Recovery grants are separate from login/MFA challenges and never authenticate sessions.
+model PasswordResetChallenge {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  channel String @db.VarChar(16)
+  destination String @db.VarChar(320)
+  passwordVersion String @map("password_version") @db.VarChar(64)
+  codeHash String @map("code_hash") @db.VarChar(64)
+  attempts Int @default(0)
+  expiresAt DateTime @map("expires_at")
+  verifiedAt DateTime? @map("verified_at")
+  resetTokenHash String? @map("reset_token_hash") @db.VarChar(64)
+  resetExpiresAt DateTime? @map("reset_expires_at")
+  usedAt DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@map("password_reset_challenges")
+}
+
+model TelegramRecoveryLink {
+  passwordVersion String @map("password_version") @db.VarChar(64)
+  tokenHash String @id @map("token_hash") @db.VarChar(64)
+  userId String @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("telegram_recovery_links")
+}
